@@ -1,8 +1,10 @@
 #+TITLE: Cordyceps: Named Parameters for Emacs Lisp with zero runtime overhead
 
-The connascence of position (CoP) in function arguments is a serious problem that ruins the readability of Lisp code. /cl-libs/ provides ~cl-defun~ with ~&keywords~ allows developers to define functions called with keyword arguments, such as ~(cl-remove-if pred seq :key #'car)~. However, each time we call the function, the keyword arguments are parsed. It is usually not necessary since the keywords and the value expression are usually known at compile time. Coryceps provides similar keywords arguments but the keywords are parsed when compilation.
+The connascence of position (CoP) in function arguments is a serious problem that ruins the readability of Lisp code. /cl-libs/ provides ~cl-defun~ with ~&key~ allows developers to define functions called with keyword arguments, such as ~(cl-remove-if pred seq :key #'car)~. However, each time we call the function, the keyword arguments are parsed. It is usually not necessary since the keywords and the value expression are usually known at compile time. Coryceps provides similar keywords arguments but the keywords are parsed when compilation.
 
 ** Usage
+
+/Cordyceps/ are compiler macros. So, there is no need to load it at runtime.
 
 #+BEGIN_SRC emacs-lisp
   (eval-when-compile
@@ -16,3 +18,51 @@ The connascence of position (CoP) in function arguments is a serious problem tha
 
   (my-function :arg2 t :arg1 (list 1 2))
 #+END_SRC
+
+** Difference between ~cl-defun~ and ~np-defun~
+*** Intuition
+#+BEGIN_SRC emacs-lisp
+  (cl-defun foo (&key arg1 arg2)
+    (if arg1 arg2 nil))
+#+END_SRC
+
+in a overly simplified mannar, this function will be expand to:
+
+#+BEGIN_SRC emacs-lisp
+  (defun foo (&rest args)
+    (let ((arg1 (cadr (plist-member ':arg1 args)))
+  	(arg2 (cadr (plist-member ':arg2 args))))
+      (validate-args--foo args)
+      (if arg1 arg2 nil)))
+#+END_SRC
+
+Every time we call ~foo~, the arglist will be parsed before really executing the function. The form correspond to the keyword are known at compile time in most cases. So, theoretically we can define ~foo~ as with ~defun~.
+
+#+BEGIN_SRC emacs-lisp
+  (defun foo (arg1 arg2)
+    (if arg1 arg2 nil))
+#+END_SRC
+
+On the call site, we can compile ~(foo :arg2 '(a b) :arg1 t)~ into: ~(foo t arg2)~.
+
+*** Implementation
+What ~np-defun~ really does is:
+
+1. Define a internal function accepting position parameters
+2. Define a wrapper function accepting named parameters. The wrapper parses the arglist and calls the internal function at runtime. ~funcall, apply, eval~ trigger the wrapper function.
+3. Transforms calls to the function, into a calls to the internal function at compile time, while preserving the natural evaluation order of arglists.
+
+Example:
+#+BEGIN_SRC emacs-lisp
+  (let ((arg2 '(a b))
+        (arg1 t))
+    (foo--internal arg1 arg2))
+#+END_SRC
+
+** Todo Lists
+1. doctring is still defined in the internal function, should be move to the wrapper.
+2. the default value form are evaluated in the scope of the call-site, it should be evaluated in the scope of the function definition.
+3. The generated compiler macro, ~FOO--optimizer~, should not be visible at runtime.
+4. Tests
+5. edebug integration.
+6. advice (maybe impossible)

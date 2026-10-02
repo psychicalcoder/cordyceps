@@ -16,14 +16,22 @@
      args)))
 
 (defmacro np-defun (name args &rest body)
-  "Define NAME as a function whose arguments are passed by keyword. Like `cl-defun' with `&keyword' in arglist, each argument is supplied as :SYMBOL VALUE and may have a default value.
+  "Define NAME as a function whose arguments are passed by keyword. Like
+`cl-defun' with `&key' in arglist, each argument is supplied as
+:SYMBOL VALUE and may have a default value.
 
-Each element of `ARGLIST' is a list (SYMBOL DEFAULT_VALUE) or a symbol (whose default value will be `nil').
-The default value forms are evaluated at runtime before calling the funciton.
+Each element of `ARGLIST' is a list (SYMBOL DEFAULT_VALUE) or a
+symbol (whose default value will be `nil').  The default value forms are
+evaluated at runtime before calling the funciton.
 
-Callers may pass arguments in any order, and may omit any of them. The supplied value forms are evaluated left to right, in the order they appear in the call. After that, the DEFAULT forms of the omitted arguments are evaluated in the order those arguments appears in ARGLIST.
+Callers may pass arguments in any order, and may omit any of them. The
+supplied value forms are evaluated left to right, in the order they
+appear in the call. After that, the DEFAULT forms of the omitted
+arguments are evaluated in the order those arguments appears in ARGLIST.
 
-When a call is byte-compiled with the definition. The keywords are resolved at compile time, so the call costs the same as a call with positional arguments.
+When a call is byte-compiled with the definition. The keywords are
+resolved at compile time, so the call costs the same as a call with
+positional arguments.
 
 \(fn NAME ARGLIST [DOCSTRING] BODY...)"
   (declare (doc-string 3) (indent 2))
@@ -104,13 +112,4 @@ When a call is byte-compiled with the definition. The keywords are resolved at c
 			  defargs
 			  )))))))
 
-;;; test
-
-(np-defun test-np-defun ((a 1) b (c 3))
-  "Test Np defun"
-  (message "%S %S %S" a b c))
-
-(defun test-np-defun-hello ()
-  (interactive)
-  (test-np-defun :a 4 :b 5 :c 6))
-
+(provide 'cordyceps)
