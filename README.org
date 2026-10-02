@@ -1,22 +1,47 @@
 #+TITLE: Cordyceps: Named Parameters for Emacs Lisp with zero runtime overhead
 
+[[assets/watercolor_cordyceps_480.png]]
+
 The connascence of position (CoP) in function arguments is a serious problem that ruins the readability of Lisp code. /cl-libs/ provides ~cl-defun~ with ~&key~ allows developers to define functions called with keyword arguments, such as ~(cl-remove-if pred seq :key #'car)~. However, each time we call the function, the keyword arguments are parsed. It is usually not necessary since the keywords and the value expression are usually known at compile time. Coryceps provides similar keywords arguments but the keywords are parsed when compilation.
 
 ** Usage
 
-/Cordyceps/ are compiler macros. So, there is no need to load it at runtime.
+Put =cordyceps.el= into =load-path=.
 
 #+BEGIN_SRC emacs-lisp
   (eval-when-compile
     (require 'cordyceps))
+#+END_SRC
 
-  (np-defun my-function ((arg1 defval1) arg2 (arg3 defval3))
-    "Docs"
-    (if (and arg1 arg2)
-        arg3
-      nil))
+** Syntax
 
-  (my-function :arg2 t :arg1 (list 1 2))
+Like normal ~defun~, except arguments can have default values. In the following example, the default values of ~reset~ and ~advance~ are ~nil~ and ~t~ respectively. To eliminate unexpected effects, using constant expressions as default values are recommanded. The default value forms are evaluated at runtime before every function call.
+
+#+BEGIN_SRC emacs-lisp
+  (let ((cnt 0))
+    (np-defun counter (reset (advance t))
+      "Return the counter value and advance the counter. Arguments are optional
+  keyword/argument pairs.
+
+  :reset BOOL -- if BOOL is non-nil, set the counter to zero after return.
+  :advance BOOL -- BOOL is `t' by default; if BOOL is non-nil, advance the
+  counter after return (or reset). `t'
+  \(fn &key RESET ADVANCE)"
+      (prog1 cnt
+        (when reset (setq cnt 0))
+        (when advance (setq cnt (1+ cnt))))))
+#+END_SRC
+
+Passing an argument must specify the keyword. Arguments can be in any order.
+
+#+BEGIN_SRC emacs-lisp
+  (counter) ;; ==> (counter :reset nil :advance t)
+  (counter t) ;; ==> Error!
+  (counter :reset t) ;; ==> (counter :reset t :advance t)
+  (counter :advnace nil) ;; ==> (counter :reset nil :advance nil)
+  (counter :advance nil :reset (should-reset-p))
+  ;; ==> (let ((g487 (should-reset-p)))
+  ;;       (counter :reset g487 :advance nil))
 #+END_SRC
 
 ** Difference between ~cl-defun~ and ~np-defun~
