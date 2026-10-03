@@ -24,6 +24,9 @@ Each element of `ARGLIST' is a list (SYMBOL DEFAULT_VALUE) or a
 symbol (whose default value will be `nil').  The default value forms are
 evaluated at runtime before calling the funciton.
 
+If the function is declared with an compiler macro, it masks the
+compiler macro defined by np-defun.
+
 Callers may pass arguments in any order, and may omit any of them. The
 supplied value forms are evaluated left to right, in the order they
 appear in the call. After that, the DEFAULT forms of the omitted
