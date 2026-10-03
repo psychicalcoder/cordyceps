@@ -85,9 +85,7 @@ Example:
 #+END_SRC
 
 ** Todo Lists
-1. doctring is still defined in the internal function, should be move to the wrapper.
-2. the default value form are evaluated in the scope of the call-site, it should be evaluated in the scope of the function definition.
-3. The generated compiler macro, ~FOO--optimizer~, should not be visible at runtime.
-4. Tests
-5. edebug integration.
-6. advice (maybe impossible)
+1. the default value form are evaluated in the scope of the call-site, it should be evaluated in the scope of the function definition.
+2. tests
+3. edebug integration.
+4. advice (maybe impossible)

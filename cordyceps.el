@@ -36,63 +36,78 @@ positional arguments.
 \(fn NAME ARGLIST [DOCSTRING] BODY...)"
   (declare (doc-string 3) (indent 2))
   (let* ((name1 (intern (concat (symbol-name name) "--internal")))
-	 (cmname (intern (concat (symbol-name name) "--optimizer")))
 	 (nargs (cordyceps--normalize-args args))
 	 (argsyms (mapcar #'car nargs))
 	 (defaults (mapcar (lambda (narg)
 			    (cons (intern (concat ":" (symbol-name (car narg))))
 				  (cdr narg)))
-			  nargs)))
+			   nargs))
+	 (optimizer ;; define an optimzer as a lambda
+	  `(lambda (arglist)
+	     (let ((rargs arglist)
+		   (defargs ',defaults)
+		   (bindings ()) ;; tmp -> form ())
+		   (provider ()) ;; (key . tmp)
+		   passargs)
+	       ;; check the arglist is a well-formed plist whose keys
+	       ;; are all valid
+	       (while rargs
+		 ;; key and value are not paired
+		 (unless (cdr rargs)
+		   (error "Invalid arguments %s" arglist))
+		 ;; the key is a valid key
+		 (let* ((key (car rargs))
+			(val (cadr rargs))
+			(defarg (assq key defargs))
+			(tmp (gensym)))
+		   (if defarg
+		       (progn
+			 (push (list tmp val) bindings)
+			 (push (cons key tmp) provider))
+		     (error "Invalid key %s" key)))
+		 (setq rargs (cddr rargs)))
+
+	       ;; also let-bind deafult arguments
+	       (mapc #'(lambda (kv)
+			 (let ((k (car kv))
+			       (v (cdr kv)))
+			   (unless (plist-member arglist k)
+			     (let ((tmp (gensym)))
+			       (push (list tmp v) bindings)
+			       (push (cons k tmp) provider)))))
+		     defargs)
+
+	       (setq bindings (nreverse bindings)
+		     passargs (mapcar #'(lambda (kv)
+					  (let ((k (car kv)))
+					    (cdr (assq k provider))))
+				      defargs))
+	       `(let (,@bindings)
+		  (,',name1 ,@passargs)))))
+	 doc
+	 doc-and-decl
+	 )
+
+    ;; if the body contains only 1 element and the element is a
+    ;; string, it is the return value instead of a docstring.
+    (when (and (consp body) (stringp (car body)) (consp (cdr body)))
+      (setq doc (car body))
+      (pop body))
+
+    ;; if the body already contains a declare form, it should be merge
+    ;; into the compiler macro declare form.
+    (let ((decl `(declare (compiler-macro ,optimizer))))
+      (when (and (consp body) (consp (car body)) (eq 'declare (caar body)))
+	(setq decl (append decl (cdar body))) ;; get decl form and drop 'declare
+	(pop body))
+      (setq doc-and-decl (append (list doc) (list decl))))
+
     `(progn
        (defun ,name1 (,@argsyms)
 	 ,@body)
 
-       (eval-and-compile
-	 (defun ,cmname (_wholeform &rest arglist)
-	   (let ((rargs arglist)
-		 (defargs ',defaults)
-		 (bindings ()) ;; tmp -> form ()) ;; (key . tmp)
-		 passargs
-		 )
-	     ;; check the arglist is a well-formed plist whose keys
-	     ;; are all valid
-	     (while rargs
-	       ;; key and value are not paired
-	       (unless (cdr rargs)
-		 (error "Invalid arguments %s" arglist))
-	       ;; the key is a valid key
-	       (let* ((key (car rargs))
-		      (val (cadr rargs))
-		      (defarg (assq key defargs))
-		      (tmp (gensym)))
-		 (if defarg
-		     (progn
-		       (push (list tmp val) bindings)
-		       (push (cons key tmp) provider))
-		   (error "Invalid key %s" key)
-		   ))
-	       (setq rargs (cddr rargs)))
-
-	     ;; also let-bind deafult arguments
-	     (mapc #'(lambda (kv)
-		       (let ((k (car kv))
-			     (v (cdr kv)))
-			 (unless (plist-member arglist k)
-			   (let ((tmp (gensym)))
-			     (push (list tmp v) bindings)
-			     (push (cons k tmp) provider)))))
-		   defargs)
-
-	     (setq bindings (nreverse bindings)
-		   passargs (mapcar #'(lambda (kv)
-					(let ((k (car kv)))
-					  (cdr (assq k provider))))
-				    defargs))
-	     `(let (,@bindings)
-		(,',name1 ,@passargs)))))
-
        (defun ,name (&rest arglist)
-	 (declare (compiler-macro ,cmname))
+	 ,@doc-and-decl
 	 (let ((rargs arglist)
 	       (defargs ',defaults))
 	   (while rargs
