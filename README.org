@@ -1,6 +1,6 @@
 #+TITLE: Cordyceps: Named Parameters for Emacs Lisp with zero runtime overhead
 
-[[assets/watercolor_cordyceps_480.png]]
+#+HTML: <img src="assets/watercolor_cordyceps_480.png" alt="Cordyceps" width="240" height="288">
 
 The connascence of position (CoP) in function arguments is a serious problem that ruins the readability of Lisp code. /cl-libs/ provides ~cl-defun~ with ~&key~ allows developers to define functions called with keyword arguments, such as ~(cl-remove-if pred seq :key #'car)~. However, each time we call the function, the keyword arguments are parsed. It is usually not necessary since the keywords and the value expression are usually known at compile time. Coryceps provides similar keywords arguments but the keywords are parsed when compilation.
 
